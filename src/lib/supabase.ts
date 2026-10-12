@@ -1,23 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.warn('Missing Supabase environment variables. Database connections will fail.');
+// Created by i729. Every query uses the caller's verified identity and RLS.
+export function createCallerClient(token: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error('Supabase configuration missing');
+  return createClient(url, key, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
 }
-
-// Create a single supabase client for interacting with your database
-// Note: We use the SERVICE_ROLE_KEY here since this is the backend orchestrator
-// which requires admin access to bypass RLS (Row Level Security).
-// NEVER expose this key to the frontend.
-export const supabase = createClient(
-  supabaseUrl || '',
-  supabaseServiceKey || '',
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);

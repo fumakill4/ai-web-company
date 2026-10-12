@@ -19,13 +19,17 @@ export default function TaskList({ refreshTrigger }: { refreshTrigger: number })
 
   const fetchTasks = async () => {
     setLoading(true);
-    const { data, error } = await supabaseClient
+    if (!supabaseClient) { setTasks([]); setLoading(false); return; }
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) { setTasks([]); setLoading(false); return; }
+    const { data } = await supabaseClient
       .from('tasks')
       .select('*, websites(name)')
+      .eq('created_by', session.user.id)
       .order('created_at', { ascending: false })
       .limit(5);
       
-    if (data) setTasks(data);
+    setTasks(data || []);
     setLoading(false);
   };
 
