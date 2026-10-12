@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { supabaseClient } from '@/lib/supabase-client';
 import { Terminal, Send, Loader2 } from 'lucide-react';
 
 export default function CommandInput({ onCommandSent }: { onCommandSent: () => void }) {
@@ -15,14 +16,17 @@ export default function CommandInput({ onCommandSent }: { onCommandSent: () => v
     setFeedback(null);
 
     try {
+      if (!supabaseClient) throw new Error('The dashboard data service is not configured.');
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) throw new Error('Sign in with an approved Supabase account before submitting commands.');
       const res = await fetch('/api/orchestrator', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          instruction,
-          owner_id: 'owner_1'
+          instruction
         })
       });
 
@@ -35,8 +39,8 @@ export default function CommandInput({ onCommandSent }: { onCommandSent: () => v
       } else {
         setFeedback({ type: 'error', message: data.message || data.error || 'Failed to dispatch command.' });
       }
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: err.message });
+    } catch (err: unknown) {
+      setFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Command failed' });
     } finally {
       setIsSubmitting(false);
       setTimeout(() => setFeedback(null), 5000);
